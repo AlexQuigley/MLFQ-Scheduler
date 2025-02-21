@@ -6,29 +6,33 @@ typedef struct process Process;
 typedef struct queue Queue;
 typedef struct node Node;
 
+
+// Node structure representing a process in the queue
 struct node {
-    Node *next;
-    Process *P;
+    Node *next;  // Pointer to the next node in the queue
+    Process *P;  // Pointer to the process stored in this node
 };
 
+// Process structure containing scheduling-related attributes
 struct process {
-    char name;
-    int arrivalTime;
-    int workRemaining;
-    int timeInQueue;
-    int totalTimeUsed;
-    int responseTime;
-    int hasStarted;
+    char name;            // Process name (A, B, C, etc.)
+    int arrivalTime;      // Time when the process arrives in the system
+    int workRemaining;    // Amount of work (CPU time) remaining for the process
+    int timeInQueue;      // Time the process has spent in the current queue
+    int totalTimeUsed;    // Total CPU time the process has used
+    int responseTime;     // Response time (first time it gets CPU - arrival time)
+    int hasStarted;       // Flag to indicate if the process has started execution
 };
 
+// Queue structure for multilevel feedback queue scheduling
 struct queue {
-    int timeSlice;
-    int timeAllotment;
-    int size;
-    Node *head;
-    Node *tail;
+    int timeSlice;        // Maximum time a process can run before being preempted
+    int timeAllotment;    // Maximum time a process can spend in this queue before demotion
+    int size;             // Number of processes currently in the queue
+    Node *head, *tail;    // Pointers to the front and back of the queue
 };
 
+// Function to add a node (process) to the end of a queue
 void enqueue(Queue *Q, Node *N) {
     if (Q->size == 0) {
         Q->head = Q->tail = N;
@@ -40,6 +44,7 @@ void enqueue(Queue *Q, Node *N) {
     Q->size++;
 }
 
+// Function to remove and return a node (process) from the front of a queue
 Node* dequeue(Queue *Q) {
     if (Q->size == 0) return NULL;
 
@@ -53,19 +58,23 @@ Node* dequeue(Queue *Q) {
     return tmp;
 }
 
+// Function to view the process at the front of the queue without removing it
 Process* peek(Queue *Q) {
     if (Q->size == 0) return NULL;
     return Q->head->P;
 }
 
+// Function to print when a process runs, indicating its queue level
 void printProcessRan(int queueNum, char processName)  {
     printf("%d %c\n", queueNum, processName);
 }
 
+// Function to print when a process completes, including response and turnaround times
 void printProcessCompleted(char processName, int responseTime, int turnaroundTime)  {
     printf("%c %d %d\n", processName, responseTime, turnaroundTime);
 }
 
+// Function to print final statistics after all processes have finished executing
 void printAllFinished(int endTime, int avgResponseTime, int avgTurnaroundTime)  {
     printf("%d %d %d\n", endTime, avgResponseTime, avgTurnaroundTime);
 }
@@ -74,17 +83,21 @@ int main(int argc, char* argv[]) {
     Node *nextToArrive = NULL;
     int remainingProcesses = 0;
 
+    // Ensure proper command-line arguments are provided
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <T> <numberOfQueues> <queue1_timeSlice> <queue1_allotment> ... <process_arrival> <process_work>\n", argv[0]);
         return 1;
     }
 
+    // Read time period for queue priority reset
     int timePeriod;
     sscanf(argv[1], "%d", &timePeriod);
 
+    // Read number of queues
     int numberOfQueues;
     sscanf(argv[2], "%d", &numberOfQueues);
 
+    // Initialize queues with their time slice and allotment values
     Queue queue[numberOfQueues];
     for (int i = 1; i <= numberOfQueues; i++) {
         sscanf(argv[i*2+1], "%d", &(queue[i-1].timeSlice));
@@ -93,6 +106,10 @@ int main(int argc, char* argv[]) {
         queue[i-1].head = NULL;
         queue[i-1].tail = NULL;
     }
+
+    // When two processes are added to the queue, the newer process is not getting placed ahead of the one already in the queue.
+    // Add a check flag so that once a process is finished running it checks if there are new processes that have been queued 
+    // and moves them to the front of the queue, if multiple processes have been added order them in alphabetical order.
 
     int numberOfProcesses = (argc - 3 - numberOfQueues*2) / 2;
     Node *arrivalQueue = NULL;
